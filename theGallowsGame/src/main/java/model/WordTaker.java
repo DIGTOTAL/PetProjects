@@ -1,28 +1,44 @@
 package model;
 
-import java.io.IOException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Stream;
 
 public class WordTaker {
-    public static Optional<String> getRandomWord(Path filePath) {
-        try (Stream<String> lines = Files.lines(filePath, StandardCharsets.UTF_8)) {
-            List<String> words = lines
-                    .flatMap(line -> Arrays.stream(line.split(",")))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .toList();
+    private static final Logger LOGGER = LogManager.getLogger(WordTaker.class);
 
-            if (words.isEmpty()) return Optional.empty();
-            return Optional.of(words.get(ThreadLocalRandom.current().nextInt(words.size())));
-        } catch (IOException e) {
-            return Optional.empty();
+    public static String getRandomWordFromResource(String resourceName) {
+        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        try (InputStream is = cl.getResourceAsStream(resourceName)) {
+            if (is == null) {
+                LOGGER.error("Resource not found: {}", resourceName);
+                return null;
+            }
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                List<String> words = br.lines()
+                        .flatMap(line -> Arrays.stream(line.split(",")))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .map(String::toLowerCase)
+                        .toList();
+                if (words.isEmpty()) {
+                    LOGGER.error("No words loaded from resource: {}", resourceName);
+                    return null;
+                }
+                String picked = words.get(ThreadLocalRandom.current().nextInt(words.size()));
+                LOGGER.debug("Picked word from {} (length={})", resourceName, picked.length());
+                return picked;
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to load words from resource: {}", resourceName, e);
+            return null;
         }
     }
 }
