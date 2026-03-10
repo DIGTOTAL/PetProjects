@@ -1,15 +1,20 @@
-import java.nio.file.Path;
-import java.util.Optional;
-import model.WordTaker;
+import model.Game;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.util.Scanner;
 
 public class App {
+    private static final Logger LOG = LogManager.getLogger(App.class);
+
     public static void main(String[] args) {
-        Path wordsFile = Path.of("words.txt");
-        Optional<String> word = WordTaker.getRandomWord(wordsFile);
-        word.ifPresentOrElse(
-                w -> System.out.println("Chosen: " + w),
-                () -> System.out.println("No word found")
-        );
+        LOG.info("Application started");
+        try (Scanner scanner = new Scanner(System.in)) {
+            new GameRunner(scanner, Game::new).run();
+        } catch (Exception e) {
+            LOG.error("Unhandled exception in main", e);
+            System.out.println("Приложение завершилось с ошибкой. Проверьте логи.");
+        }
+        LOG.info("Application finished");
     }
 }
-
